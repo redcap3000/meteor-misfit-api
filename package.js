@@ -14,7 +14,7 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.0.3.1');
-  api.use('momentjs:moment', 'server');
+  api.use(['momentjs:moment','accounts-base'], 'server');
   api.addFiles('redcap3000:misfit-model.js',['client','server']);
   api.addFiles('redcap3000:misfit-api.js','server');
 
