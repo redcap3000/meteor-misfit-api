@@ -1,0 +1,7 @@
+{ 
+ "misfit" : {
+      "key" : "clientKey",
+      "secret" : "clientSecret",
+      "redirect_uri" : "httpRedirect"
+  }
+}
