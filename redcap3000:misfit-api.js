@@ -6,8 +6,8 @@ Meteor.startup(
 			var settings = Meteor.settings.misfit;
 			if(typeof settings.key != "undefined" && typeof settings.secret != "undefined" && typeof settings.redirect_uri != "undefined"){
 				MisfitAPI = new MisfitAPI({
-			    	clientKey: settings.key,//clientKey in our developer portal
-				    clientSecret:settings.secret,//clientSecret in our developer portal
+			    	clientKey: settings.key,
+				    clientSecret:settings.secret,
 			    	redirect_uri: settings.redirect_uri,
 				});
 			}else{
@@ -18,11 +18,16 @@ Meteor.startup(
 		}
 	}
 );
-
-Meteor.methods({
-	misfitSleepData : function(uId,startDate,endDate){
-		// lookup user token... eventually move into users object
-		// probably just date a js date object as stored in mongo and convert to momemnt
+var getMisfitToken = function(uId){
+	var token = Meteor.users.findOne({"services.misfitToken" : {"$exists" : true},_id:uId},{"fields": {"services.misfitToken":1} });	if(typeof token != "undefined" && typeof token.services.misfitToken.access_token != "undefined"  ){
+	if(typeof token != "undefined" && typeof token.services.misfitToken.access_token != "undefined"  ){
+		return token.services.misfitToken.access_token;
+	}else{
+		return undefined;
+	}
+};
+var misfitDateFormat = function(startDate,endDate){
+	// iso utc dates to stringformat
 		var now = new moment();
 		var dFormat = "YYYY-MM-DD";
 		if(typeof endDate == "undefined"){
@@ -37,16 +42,98 @@ Meteor.methods({
 		}else{
 			startDate = new moment(endDate).format(dFormat);
 		}
+		return {startDate : startDate,endDate : endDate};
+}
+Meteor.methods({
+	misfitGetProfile : function(uId){
+		var token = getMisfitToken(uId);
+		if(typeof token != "undefined" && token != null && token){
+			return MisfitAPI.getProfile({token: token});
+		}
+		else{
+			console.log("Problem with token with misfit get profile");
+		}
+	},
+	misfitGetDevice : function(uId){
+		var token = getMisfitToken(uId);
+		if(typeof token != "undefined" && token != null && token)
+			return MisfitAPI.getDevice({token: token});
+		else{
+			console.log("Problem with token with misfit get device");
+		}
+	},
+	misfitGetGoals : function(uId,startDate,endDate){
+		var token = getMisfitToken(uId);
+		if(typeof token != "undefined" && token != null && token){
+			var dates = misfitDateFormat(startDate,endDate);
+			return MisfitAPI.getSleep({
+			    token: token,
+			    start_date:dates.startDate,
+			    end_date:dates.endDate
+			});
+		}else{
+			console.log("Problem with token with misfit get goals");
+		}
+	},
+	misfitGetSummary : function(uId,startDate,endDate){
+		// has 30 day limit maybe write stuff in moment to enforce/crawl ranges...
+		var token = getMisfitToken(uId);
+		if(typeof token != "undefined" && token != null && token){
+			var dates = misfitDateFormat(startDate,endDate);
+			return MisfitAPI.getSummary({
+			    token: token,
+			    start_date:dates.startDate,
+			    end_date:dates.endDate,
+			    detail: true
+			});
+		}else{
+			console.log("Problem with token with misfit get summary");
+		}
+	},
+	misfitGetSession : function(uId,startDate,endDate,objectId){
+		// has 30 day limit maybe write stuff in moment to enforce/crawl ranges...
+		var token = getMisfitToken(uId);
+		if(typeof token != "undefined" && token != null && token){
+			var misfit = {
+			    token: token,
+			    detail:true
+			};
+			if(typeof objectId != "undefined" && objectId != null && objectId){
+				misfit.object_id = objectId
+			}else{
+				// date processing
+				var dates = misfitDateFormat(startDate,endDate);
+				misfit.start_date = dates.startDate;
+				misfit.end_date = dates.endDate;
+			}
+			return MisfitAPI.getSession(misfit);
+		}else{
+			console.log("Problem with token with misfit get session");
+		}
+	},
+	misfitSleepData : function(uId,startDate,endDate,objectId){
+		// lookup user token... eventually move into users object
+		// probably just date a js date object as stored in mongo and convert to momemnt
 		
-		var token = Meteor.users.findOne({"services.misfitToken" : {"$exists" : true},_id:uId},{"fields": {"services.misfitToken":1} });
+		
+		var token = getMisfitToken(uId);
 
-		if(typeof token != "undefined" && typeof token.services.misfitToken.access_token != "undefined"  ){
+		if(typeof token != "undefined" && token != null && token ){
+			
+			var misfit = {
+				  token: token,
+				  detail:true
+			};
+			if(typeof objectId != "undefined" && objectId != null && objectId){
+				misfit.object_id = objectId;
+			}else{
+				var dates = misfitDateFormat(startDate,endDate);
+				misfit.start_date = dates.startDate;
+				misfit.end_date = dates.endDate;
+			}
 			// if start and end date not provided get a week from the currant date
 			MisfitAPI.getSleep({
-			    token: token.services.misfitToken.access_token,
-			    start_date:startDate,
-			    end_date:endDate,
-			    detail:true
+			  misfit
 			},
 			Meteor.bindEnvironment(function(err,result){
 			    if (err || !result) {
@@ -66,14 +153,11 @@ Meteor.methods({
 				    		if(x){
 				    			r.push(x);
 				    		}
-
 			    		});
 			    	});
 			    	console.log(Misfit.update({_id : result.id, owner:uId} , {"$set" : {owner: uId,startTime: rStart,duration:rDuration, data : r} },{upsert:true} ));
-
 			    }
 			}));
-
 		}else{
 			console.log("Problem with Token check");
 			return false;
@@ -99,12 +183,6 @@ Meteor.methods({
 			// FIX THIS...
 			MisfitAPI.exchange(code,Meteor.bindEnvironment(function(err,token){
 				if(typeof err != "undefined" &&  err != null && typeof err.code != "null"){
-					// store this value?
-					//if(!Misfit.findOne({_id : code})){
-					//	console.log(Misfit.insert({_id : code, error : err.code  ,owner:uId}));
-					//}
-					//else
-					//	console.log('error record already created');
 					console.log(err.code);
 				}
 				if(typeof token != "undefined" && token){
