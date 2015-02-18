@@ -1,0 +1,1 @@
+Misfit = new Meteor.Collection("misfit_api");
