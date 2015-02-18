@@ -1,13 +1,23 @@
 // Write your package code here!
-Meteor.startup(function(){
-	MisfitAPI = Npm.require("misfit-cloud-api");
-
-	MisfitAPI = new MisfitAPI({
-    	clientKey:'P1OLJq6HATNgyWID',//clientKey in our developer portal
-	    clientSecret:'wrwSNdczc7iPtxDay7RaI5wkQ5otJBRp',//clientSecret in our developer portal
-    	redirect_uri: 'http://varsahealth.varsahealth.com:3000/misfit',
-	});
-});
+Meteor.startup(
+	function(){
+		MisfitAPI = Npm.require("misfit-cloud-api");
+		if(typeof Meteor.settings.misfit != "undefined"){
+			var settings = Meteor.settings.misfit;
+			if(typeof settings.key != "undefined" && typeof settings.secret != "undefined" && typeof settings.redirect_uri != "undefined"){
+				MisfitAPI = new MisfitAPI({
+			    	clientKey: settings.key,//clientKey in our developer portal
+				    clientSecret:settings.secret,//clientSecret in our developer portal
+			    	redirect_uri: settings.redirect_uri,
+				});
+			}else{
+				console.log("Meteor.settings.misfit misconfigured.");
+			}
+		}else{
+			console.log("Meteor.settings did not have misfit keys.")
+		}
+	}
+);
 
 Meteor.methods({
 	misfitSleepData : function(uId,startDate,endDate){
@@ -28,13 +38,12 @@ Meteor.methods({
 			startDate = new moment(endDate).format(dFormat);
 		}
 		
-		var token = Misfit.findOne({token : {"$exists" : true},owner:uId},{"fields": {token:1} });
+		var token = Meteor.users.findOne({"services.misfitToken" : {"$exists" : true},_id:uId},{"fields": {"services.misfitToken":1} });
 
-		if(typeof token != "undefined" && typeof token.token.access_token != "undefined"){
-			console.log('making sleep call to \t: ' + token.token.access_token + '\t startDate: ' + startDate + ' \t endDate: ' + endDate );
+		if(typeof token != "undefined" && typeof token.services.misfitToken.access_token != "undefined"  ){
 			// if start and end date not provided get a week from the currant date
 			MisfitAPI.getSleep({
-			    token: token.token.access_token,
+			    token: token.services.misfitToken.access_token,
 			    start_date:startDate,
 			    end_date:endDate,
 			    detail:true
@@ -48,47 +57,21 @@ Meteor.methods({
 			    	// possibly convert startTime to date object...
 			    	// do date time conversion
 			    	var r = [];
+			    	var rStart,rDuration;
 			    	result.sleeps.filter(function(arr){
-			    		console.log('result sleeps : ');
-			    		console.log(arr);
+			    		rStart = arr.startTime;
+			    		rDuration = arr.duration;
 			    		arr.sleepDetails.filter(function(theTime){
 			    			var x = { datetime : new moment.utc(theTime.datetime).toDate(), value: theTime.value };
-				    		console.log(x);
 				    		if(x){
 				    			r.push(x);
 				    		}
 
 			    		});
 			    	});
-			    	console.log(Misfit.update({_id : result.id, owner:uId} , {"$set" : {owner: uId,startTime: result.startTime,duration:result.duration, data : r} },{upsert:true} ));
+			    	console.log(Misfit.update({_id : result.id, owner:uId} , {"$set" : {owner: uId,startTime: rStart,duration:rDuration, data : r} },{upsert:true} ));
 
 			    }
-			    // iterate through sleepDetails to determine if a value is different or existing?
-			    // probably use update/upsert if possible
-				/*
-				  {
-				    "sleeps":[
-				      {
-				        "id":"54dab076c5ab5e8196243025",
-				        "autoDetected": false,
-				        "startTime":"2014-05-19T23:26:54+07:00",
-				        "duration": 0,
-				        "sleepDetails":[
-				          {
-				            "datetime":"2014-05-19T23:26:54+07:00",
-				            "value":2
-				          },
-				          {
-				            "datetime":"2014-05-19T23:59:22+07:00",
-				            "value":1
-				          },
-				          ...
-				        ]
-				      },
-				      ...
-				    ]
-				  }
-				 */
 			}));
 
 		}else{
@@ -98,17 +81,12 @@ Meteor.methods({
 	},
 	misfitAuth : function(){
 		if(typeof MisfitAPI != "undefined"){
-			console.log(this.userId);
-			console.log(MisfitAPI);
 			var redirect;
 			var q= MisfitAPI.authorize(function(err,redirectURL){
-				console.log(err);
 				// change location...
 				redirect = redirectURL;
-				console.log(redirectURL);
 				return redirectURL;
 			});
-			console.log(redirect);
 			return redirect;
 			//return redirect;
 		}else{
@@ -117,27 +95,23 @@ Meteor.methods({
 		return false;
 	},
 	misfitExchange : function(code,uId){
-		console.log(code);
-		console.log(uId);
 		if(typeof code != "undefined" &&  typeof uId != "undefined" && uId != null ){
-			console.log('upserting _id : ' + code  + ' owner : ' + uId);
 			// FIX THIS...
-		
-
 			MisfitAPI.exchange(code,Meteor.bindEnvironment(function(err,token){
-				console.log(err);
 				if(typeof err != "undefined" &&  err != null && typeof err.code != "null"){
 					// store this value?
-//					var check = Misfit.findOne()
-					//console.log(err);
-					if(!Misfit.findOne({_id : code}))
-						console.log(Misfit.insert({_id : code, error : err.code  ,owner:uId}));
-					else
-						console.log('error record already created');
+					//if(!Misfit.findOne({_id : code})){
+					//	console.log(Misfit.insert({_id : code, error : err.code  ,owner:uId}));
+					//}
+					//else
+					//	console.log('error record already created');
+					console.log(err.code);
 				}
 				if(typeof token != "undefined" && token){
-				
-					console.log(Misfit.update({_id : code, owner:uId} , {"$set" : {token : token} },{upsert:true} ));
+					// update user object...
+					//Meteor.Users.findOne({_id : uId});
+					console.log('should be updating Meteor.users ');
+					console.log(Meteor.users.update({_id : uId} , {"$set" : {"services.misfitToken" : token} } ));
 
 				}else{
 					// auth expired probably... re route to misfit to regenerate or ask user
@@ -153,7 +127,4 @@ Meteor.methods({
 		}
 		return false;
 	}
-
 });
-
-
