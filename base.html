@@ -1,0 +1,48 @@
+<template name="misfit">
+<div class="row">
+	<div class="col-sm-12 col-md-6">
+		<h3>Profile</h3>
+		{{#with getProfile}}
+		<h4>{{name}}</h4>
+		<h4>{{userId}}</h4>
+		<h5>{{birthday}}</h5>
+		{{/with}}
+	</div>
+	<div class="col-sm-12 col-md-6">
+		<h3>Device</h3>
+	{{#with getDevice}}
+		<h4>{{batteryLevel}}</h4>
+		<h4>{{deviceType}}</h4>
+		<h4>{{lastSyncTime}}</h4>
+		<h4>{{serialNumber}}</h4>
+	{{/with}}
+	</div>
+</div>
+<div class="row">
+	<div class="col-sm-12 col-md-6">
+		<h3>Summary</h3>
+		{{#with getSummary}}
+		<ul>
+		{{#each summary}}
+			<li>{{date}} - Distance : {{distance}} - Calories : {{calories}} - Points : {{points}} - Steps : {{steps}}</li>
+		{{/each}}
+		</ul>
+		{{/with}}
+	</div>
+	<div class="col-sm-12 col-md-6">
+		<h3>Sleep</h3>
+		{{#with getSleepData}}
+		<h4>{{startTime}}</h4>
+		<h4>{{duration}}</h4>
+		<ul>
+			{{#each sleeps}}
+			<li>{{datetime}} : {{value}}</li>
+			{{/each}}
+		</ul>
+		{{/with}}
+	</div>
+</div>
+<div class="row">
+	<a href="{{a}}" onClick="Meteor.call('misfitRemoveUserData',Meteor.userId());" class="misfitReset btn btn-lrg btn-warning">Reset all data</a>
+	</div>
+</template>

@@ -1,8 +1,9 @@
 var getProfile = function () {
-	var profileCheck = Misfit.findOne({"data.name" : {"$exists": true} });
+	var profileCheck = Misfit.findOne({"rType" : "profile" });
 	console.log(profileCheck);
-	if(!profileCheck){
+	if(!profileCheck || profileCheck == null || typeof profileCheck == "undefined"){
 		if(Meteor.userId()){
+			console.log('calling');
 			Meteor.call("misfitGetProfile",Meteor.userId());
 			return true;
 		}
@@ -13,7 +14,7 @@ var getProfile = function () {
 		// ...
 	};
 var getDevice = function(){
-	var deviceCheck = Misfit.findOne({"data.deviceType" : {"$exists": true} });
+	var deviceCheck = Misfit.findOne({"deviceType" : {"$exists": true} });
 	if(!deviceCheck){
 		if(Meteor.userId()){
 			Meteor.call("misfitGetDevice",Meteor.userId());
@@ -25,7 +26,7 @@ var getDevice = function(){
 	return false;
 };
 var getSleepData = function(){
-	var sleepCheck = Misfit.findOne({"data.deviceType" : {"$exists": false} ,"data.summary" : {"$exists": false} , "data.name" : {"$exists" : false }  });
+	var sleepCheck = Misfit.findOne({"deviceType" : {"$exists": false} ,"summary" : {"$exists": false} , "name" : {"$exists" : false }  });
 	console.log(sleepCheck);
 	if(!sleepCheck){
 		if(Meteor.userId()){
@@ -39,7 +40,7 @@ var getSleepData = function(){
 };
 
 var getSummary = function(){
-	var summaryCheck = Misfit.findOne({"data.summary" : {"$exists": true} });
+	var summaryCheck = Misfit.findOne({"summary" : {"$exists": true} });
 	if(!summaryCheck){
 		if(Meteor.userId()){
 			Meteor.call("misfitGetSummary",Meteor.userId());

@@ -57,7 +57,7 @@ Meteor.methods({
 		if(typeof token != "undefined" && token != null && token){
 			MisfitAPI.getProfile({token: token},Meteor.bindEnvironment(function(e,r){
 				if(typeof r != "undefined" && r != null && r){
-					Misfit.update({_id : r.userId, owner:uId} , {"$set" : {owner: uId, data : r} },{upsert:true} );
+					Misfit.update({_id : r.userId, owner:uId} , {"$set" : {owner: uId,rType:'profile',birthday:r.birthday,name:r.name} },{upsert:true} );
 					return r;
 				}
 			}));
@@ -73,7 +73,7 @@ Meteor.methods({
 		if(typeof token != "undefined" && token != null && token){
 			MisfitAPI.getDevice({token: token},Meteor.bindEnvironment(function(e,r){
 				if(typeof r != "undefined" && r != null && r){
-					Misfit.update({_id : r.id, owner:uId} , {"$set" : {owner: uId, data : r} },{upsert:true} );
+					Misfit.update({_id : r.id, owner:uId} , {"$set" : {owner: uId,deviceType:r.deviceType,serialNumber:r.serialNumber,firmwareVersion:r.firmwareVersion,batteryLevel:r.batteryLevel,lastSyncTime:r.lastSyncTime, data : r} },{upsert:true} );
 					return r;
 				}
 			}));
@@ -116,7 +116,7 @@ Meteor.methods({
 			    detail: true
 			},Meteor.bindEnvironment(function(e,r){
 				if(typeof r != "undefined" && r != null && r){
-					Misfit.update({_id : r.id, owner:uId} , {"$set" : {owner: uId, data : r} },{upsert:true} );
+					Misfit.update({_id : r.id, owner:uId} , {"$set" : {owner: uId, summary : r.summary} },{upsert:true} );
 					return r;
 				}
 			}));
@@ -192,7 +192,7 @@ Meteor.methods({
 					    		}
 				    		});
 				    	});
-				    	Misfit.update({_id : result.id, owner:uId} , {"$set" : {owner: uId,startTime: rStart,duration:rDuration, data : r} },{upsert:true} );
+				    	Misfit.update({_id :rStart+uId, owner:uId} , {"$set" : { rId :result.id, owner: uId,duration:rDuration, sleeps : r} },{upsert:true} );
 				    }
 				}
 				)
