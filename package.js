@@ -6,7 +6,7 @@ Package.describe({
   // Brief, one-line summary of the package.
   summary: 'Wrapper for misfit-cloud-api',
   // URL to the Git repository containing the source code for this package.
-  git: '',
+  git: 'https://github.com/redcap3000/meteor-misfit-api',
   // By default, Meteor will default to using README.md for documentation.
   // To avoid submitting documentation, set this field to null.
   documentation: 'README.md'
@@ -14,10 +14,10 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.versionsFrom('1.0.3.1');
-  api.use(['momentjs:moment','accounts-base'], 'server');
+  api.use(['momentjs:moment','accounts-base','templating'], ['client','server']);
   api.addFiles('redcap3000:misfit-model.js',['client','server']);
   api.addFiles('redcap3000:misfit-api.js','server');
-
+  api.addFiles(['redcap3000:misfit-api.html','redcap3000:misfit-api-client.js'],'client');
   api.export("MisfitAPI",'server');
   api.export("Misfit",['server','client']);
 });

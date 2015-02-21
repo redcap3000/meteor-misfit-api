@@ -46,6 +46,12 @@ var misfitDateFormat = function(startDate,endDate){
 };
 
 Meteor.methods({
+	misfitRemoveUserData : function(uId){
+		if(typeof uId != "undefined"){
+			return Misfit.remove({owner:uId});
+		}
+		return false;
+	},
 	misfitGetProfile : function(uId){
 		var token = getMisfitToken(uId);
 		if(typeof token != "undefined" && token != null && token){
